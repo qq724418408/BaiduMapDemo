@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.baidu.mapapi.map.MapView
+        android:id="@+id/mv_map"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true" />
+
+    <LinearLayout
+        android:id="@+id/lltSearch"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_margin="8dp"
+        android:background="@color/transparent"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etKeyword"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="4dp"
+            android:layout_weight="4"
+            android:hint="@string/common_input_key_word_to_search" />
+
+        <Button
+            android:id="@+id/btnSearch"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_button_normal"
+            android:padding="8dp"
+            android:text="@string/common_search"
+            android:textColor="@color/colorWhite" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/lltButton"
+        android:layout_below="@+id/lltSearch"
+        android:layout_width="32dp"
+        android:layout_height="56dp"
+        android:layout_alignParentRight="true"
+        android:layout_margin="8dp"
+        android:background="@color/transparent"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/ivInfo"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:src="@mipmap/ic_info" />
+
+        <ImageView
+            android:id="@+id/ivLocal"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:src="@mipmap/ic_local_blue" />
+    </LinearLayout>
+</RelativeLayout>

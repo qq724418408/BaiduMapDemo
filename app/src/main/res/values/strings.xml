@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">BaiduMapDemo</string>
+    <string name="common_search">搜索</string>
+    <string name="common_input_key_word_to_search">长按选址，输入关键字搜索</string>
+    <string name="common_long_click_upload_user_info_and_search_nearby">长按选址，上传位置并查询周边</string>
+    <string name="common_map">地图</string>
+    <string name="common_traffic_map">交通</string>
+    <string name="common_satellite_map">卫星</string>
+    <string name="common_base_map">基础地图</string>
+    <string name="common_poi_map">POI检索</string>
+    <string name="common_indoor_map">室内地图</string>
+    <string name="common_indoor_map_start_node">起点</string>
+    <string name="common_indoor_map_end_node">终点</string>
+    <string name="common_indoor_map_click_set_start_node">单击设置起点</string>
+    <string name="common_indoor_map_long_click_set_end_node">长按设置终点</string>
+    <string name="common_indoor_map_route">导航</string>
+    <string name="common_radar_nearby_map">我的周边雷达</string>
+</resources>
