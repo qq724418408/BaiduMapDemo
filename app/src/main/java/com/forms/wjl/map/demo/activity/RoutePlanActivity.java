@@ -191,6 +191,11 @@ public class RoutePlanActivity extends BaseActivity implements OnGetGeoCoderResu
                         }
                         PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
                         baiduMap.addOverlay(options);
+//                        TransitRouteOverlay overlay = new TransitRouteOverlay(baiduMap);
+//                        baiduMap.setOnMarkerClickListener(overlay);
+//                        overlay.setData(result.getRouteLines().get(0));
+//                        overlay.addToMap();
+//                        overlay.zoomToSpan();
                     }
                 }
             }
