@@ -29,13 +29,19 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="周边" />
+                android:text="驾车" />
 
             <RadioButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="城市" />
+                android:text="步行" />
+
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="骑行" />
 
             <RadioButton
                 android:layout_width="wrap_content"

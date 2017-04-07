@@ -48,6 +48,7 @@
         <activity android:name=".activity.IndoorMapActivity" />
         <activity android:name=".activity.POIMapActivity" />
         <activity android:name=".activity.RadarNearbyActivity" />
+        <activity android:name=".activity.RoutePlanActivity" />
     </application>
 
 </manifest>

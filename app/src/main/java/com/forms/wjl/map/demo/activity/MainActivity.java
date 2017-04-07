@@ -14,6 +14,7 @@ public class MainActivity extends BaseActivity {
     private Button btnIndoorMap;
     private Button btnPOIMap;
     private Button btnRadarNearbyMap;
+    private Button btnRoutePlan;
     private Intent intent;
 
     @Override
@@ -29,6 +30,7 @@ public class MainActivity extends BaseActivity {
     protected void initViews() {
         btnBaseMap = (Button) findViewById(R.id.btnBaseMap);
         btnIndoorMap = (Button) findViewById(R.id.btnIndoorMap);
+        btnRoutePlan = (Button) findViewById(R.id.btnRoutePlan);
         btnPOIMap = (Button) findViewById(R.id.btnPOIMap);
         btnRadarNearbyMap = (Button) findViewById(R.id.btnRadarNearbyMap);
     }
@@ -44,6 +46,7 @@ public class MainActivity extends BaseActivity {
         btnIndoorMap.setOnClickListener(this);
         btnPOIMap.setOnClickListener(this);
         btnRadarNearbyMap.setOnClickListener(this);
+        btnRoutePlan.setOnClickListener(this);
     }
 
     @Override
@@ -63,6 +66,10 @@ public class MainActivity extends BaseActivity {
                 break;
             case R.id.btnRadarNearbyMap:
                 intent = new Intent(this, RadarNearbyActivity.class);
+                startActivity(intent);
+                break;
+            case R.id.btnRoutePlan:
+                intent = new Intent(this, RoutePlanActivity.class);
                 startActivity(intent);
                 break;
         }

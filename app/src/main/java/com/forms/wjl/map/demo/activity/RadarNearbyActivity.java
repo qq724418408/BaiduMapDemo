@@ -6,9 +6,11 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
@@ -163,13 +165,13 @@ public class RadarNearbyActivity extends BaseActivity implements OnGetGeoCoderRe
     /**
      * 创建InfoWindow
      *
-     * @param btn
+     * @param popView
      * @param latLng 地理坐标
      * @param offset y 轴偏移量
      */
-    private void createInfoWindow(Button btn, LatLng latLng, int offset) {
+    private void createInfoWindow(View popView, LatLng latLng, int offset) {
         baiduMap.hideInfoWindow();
-        InfoWindow mInfoWindow = new InfoWindow(btn, latLng, offset);
+        InfoWindow mInfoWindow = new InfoWindow(popView, latLng, offset);
         baiduMap.showInfoWindow(mInfoWindow); // 显示InfoWindow
     }
 
@@ -422,10 +424,12 @@ public class RadarNearbyActivity extends BaseActivity implements OnGetGeoCoderRe
                     radarUploadInfo(latLng); // 雷达位置信息上传
                     radarNearbySearchOption(latLng); // 我的雷达周边检索
                     baiduMap.clear();
-                    btnPop.setText(address); // 点击地图的时候弹出的泡泡显示地址信息
+                    View popView = LayoutInflater.from(RadarNearbyActivity.this).inflate(R.layout.layout_pop_window, null);
+                    TextView tvAddress = (TextView) popView.findViewById(R.id.tvAddress);
+                    tvAddress.setText(address); // 点击地图的时候弹出的泡泡显示地址信息
                     Marker marker = createMarker(latLng, R.mipmap.ic_localtion, false);// 构建Marker图标
                     marker.setTitle(address);
-                    createInfoWindow(btnPop, latLng, -64); // 创建InfoWindow
+                    createInfoWindow(popView, latLng, -64); // 创建InfoWindow
                     updateMap(latLng); // 更新地图显示
                     break;
             }

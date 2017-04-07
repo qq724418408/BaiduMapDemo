@@ -37,11 +37,8 @@ import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.map.OverlayOptions;
+import com.baidu.mapapi.map.PolylineOptions;
 import com.baidu.mapapi.model.LatLng;
-import com.baidu.mapapi.search.busline.BusLineResult;
-import com.baidu.mapapi.search.busline.BusLineSearch;
-import com.baidu.mapapi.search.busline.BusLineSearchOption;
-import com.baidu.mapapi.search.busline.OnGetBusLineSearchResultListener;
 import com.baidu.mapapi.search.core.PoiInfo;
 import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.geocode.GeoCodeResult;
@@ -50,12 +47,30 @@ import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
 import com.baidu.mapapi.search.poi.OnGetPoiSearchResultListener;
-import com.baidu.mapapi.search.poi.PoiCitySearchOption;
 import com.baidu.mapapi.search.poi.PoiDetailResult;
 import com.baidu.mapapi.search.poi.PoiIndoorResult;
 import com.baidu.mapapi.search.poi.PoiNearbySearchOption;
 import com.baidu.mapapi.search.poi.PoiResult;
 import com.baidu.mapapi.search.poi.PoiSearch;
+import com.baidu.mapapi.search.route.BikingRouteLine;
+import com.baidu.mapapi.search.route.BikingRoutePlanOption;
+import com.baidu.mapapi.search.route.BikingRouteResult;
+import com.baidu.mapapi.search.route.DrivingRouteLine;
+import com.baidu.mapapi.search.route.DrivingRoutePlanOption;
+import com.baidu.mapapi.search.route.DrivingRouteResult;
+import com.baidu.mapapi.search.route.IndoorRouteLine;
+import com.baidu.mapapi.search.route.IndoorRouteResult;
+import com.baidu.mapapi.search.route.MassTransitRouteLine;
+import com.baidu.mapapi.search.route.MassTransitRouteResult;
+import com.baidu.mapapi.search.route.OnGetRoutePlanResultListener;
+import com.baidu.mapapi.search.route.PlanNode;
+import com.baidu.mapapi.search.route.RoutePlanSearch;
+import com.baidu.mapapi.search.route.TransitRouteLine;
+import com.baidu.mapapi.search.route.TransitRoutePlanOption;
+import com.baidu.mapapi.search.route.TransitRouteResult;
+import com.baidu.mapapi.search.route.WalkingRouteLine;
+import com.baidu.mapapi.search.route.WalkingRoutePlanOption;
+import com.baidu.mapapi.search.route.WalkingRouteResult;
 import com.forms.wjl.map.demo.R;
 import com.forms.wjl.map.demo.base.BaseActivity;
 import com.forms.wjl.map.demo.view.MyOrientationListener;
@@ -63,7 +78,7 @@ import com.forms.wjl.map.demo.view.MyOrientationListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultListener {
+public class RoutePlanActivity extends BaseActivity implements OnGetGeoCoderResultListener {
 
     private static final String TAG = "POIMapActivity";
     private MapView mapView;
@@ -75,10 +90,12 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
     private GeoCoder geocoder = null;
     private String address;
     private LatLng point;
+    private LatLng startLatLng; // 起点坐标
+    private LatLng endLatLng; // 终点坐标
     private LocationClient locationClient;
     private LocationClientOption mOption;
     private MyLocationListener myLocationListener;
-    private PoiSearch poiSearch;
+    private RoutePlanSearch routePlanSearch; // 线路检索实例
     private MyOrientationListener myOrientationListener; // 方向传感器
     private float mCurrentX = 0; // 定位箭头方向
     private boolean isFirstLocation = true; // 首次定位
@@ -87,18 +104,17 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
     private boolean isRequest = false;
     private Toast toast;
     private String city;
-    private LatLng searchPoint;
-    private BusLineSearch busLineSearch; // 公交线路检索
     private ArrayAdapter<String> adapter;
     private List<String> names;
     private TextView tvSearchResult;
     private RadioGroup rgSearchType;
     private int searchType = 0;
+    private PoiSearch poiSearch; // 周边检索
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_poi_map);
+        setContentView(R.layout.activity_route_plan);
         initViews();
         initData();
         initListener();
@@ -106,6 +122,8 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
 
     @Override
     protected void initViews() {
+        poiSearch = PoiSearch.newInstance();
+        routePlanSearch = RoutePlanSearch.newInstance();
         rgSearchType = (RadioGroup) findViewById(R.id.rgSearchType);
         tvSearchResult = (TextView) findViewById(R.id.tvSearchResult);
         etKeyword = (AutoCompleteTextView) findViewById(R.id.etKeyword);
@@ -113,8 +131,6 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
         ivLocal = (ImageView) findViewById(R.id.ivLocal);
         myOrientationListener = new MyOrientationListener(this);
         mapView = (MapView) findViewById(R.id.mv_map);
-        poiSearch = PoiSearch.newInstance();
-        busLineSearch = BusLineSearch.newInstance();
         button = getPopButton();
         btnPop = getPopButton(); // 创建InfoWindow展示的view
         baiduMap = mapView.getMap();
@@ -138,13 +154,129 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
      */
     @Override
     protected void initListener() {
+        poiSearch.setOnGetPoiSearchResultListener(poiListener);
+        routePlanSearch.setOnGetRoutePlanResultListener(new OnGetRoutePlanResultListener() {
+            @Override
+            public void onGetWalkingRouteResult(WalkingRouteResult walkingRouteResult) {
+                Log.d(TAG, "onGetWalkingRouteResult: ");
+                if(null != walkingRouteResult && walkingRouteResult.error == SearchResult.ERRORNO.NO_ERROR){
+                    // 有结果
+                    List<WalkingRouteLine> routeLines = walkingRouteResult.getRouteLines();
+                    if (routeLines != null && routeLines.size() > 0) {
+                        List<LatLng> pointList = new ArrayList<>();
+                        List<WalkingRouteLine.WalkingStep> allStep = routeLines.get(0).getAllStep();
+                        for (WalkingRouteLine.WalkingStep step : allStep) {
+                            List<LatLng> wayPoints = step.getWayPoints();
+                            pointList.addAll(wayPoints);
+                        }
+                        PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
+                        baiduMap.clear();
+                        baiduMap.addOverlay(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onGetTransitRouteResult(TransitRouteResult result) {
+                Log.d(TAG, "onGetTransitRouteResult: ");
+                if(null != result && result.error == SearchResult.ERRORNO.NO_ERROR){
+                    // 有结果
+                    List<TransitRouteLine> routeLines = result.getRouteLines();
+                    if (routeLines != null && routeLines.size() > 0) {
+                        List<LatLng> pointList = new ArrayList<>();
+                        List<TransitRouteLine.TransitStep> allStep = routeLines.get(0).getAllStep();
+                        for (TransitRouteLine.TransitStep step : allStep) {
+                            List<LatLng> wayPoints = step.getWayPoints();
+                            pointList.addAll(wayPoints);
+                        }
+                        PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
+                        baiduMap.addOverlay(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onGetMassTransitRouteResult(MassTransitRouteResult result) {
+                Log.d(TAG, "onGetMassTransitRouteResult: ");
+                if(null != result && result.error == SearchResult.ERRORNO.NO_ERROR){
+                    // 有结果
+                    List<MassTransitRouteLine> routeLines = result.getRouteLines();
+                    if (routeLines != null && routeLines.size() > 0) {
+                        List<LatLng> pointList = new ArrayList<>();
+                        List<MassTransitRouteLine.TransitStep> allStep = routeLines.get(0).getAllStep();
+                        for (MassTransitRouteLine.TransitStep step : allStep) {
+                            List<LatLng> wayPoints = step.getWayPoints();
+                            pointList.addAll(wayPoints);
+                        }
+                        PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
+                        baiduMap.addOverlay(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onGetDrivingRouteResult(DrivingRouteResult result) {
+                Log.d(TAG, "onGetDrivingRouteResult: ");
+                if(null != result && result.error == SearchResult.ERRORNO.NO_ERROR){
+                    // 有结果
+                    List<DrivingRouteLine> routeLines = result.getRouteLines();
+                    if (routeLines != null && routeLines.size() > 0) {
+                        List<LatLng> pointList = new ArrayList<>();
+                        List<DrivingRouteLine.DrivingStep> allStep = routeLines.get(0).getAllStep();
+                        for (DrivingRouteLine.DrivingStep step : allStep) {
+                            List<LatLng> wayPoints = step.getWayPoints();
+                            pointList.addAll(wayPoints);
+                        }
+                        PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
+                        baiduMap.addOverlay(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onGetIndoorRouteResult(IndoorRouteResult result) {
+                Log.d(TAG, "onGetIndoorRouteResult: ");
+                if(null != result && result.error == SearchResult.ERRORNO.NO_ERROR){
+                    // 有结果
+                    List<IndoorRouteLine> routeLines = result.getRouteLines();
+                    if (routeLines != null && routeLines.size() > 0) {
+                        List<LatLng> pointList = new ArrayList<>();
+                        List<IndoorRouteLine.IndoorRouteStep> allStep = routeLines.get(0).getAllStep();
+                        for (IndoorRouteLine.IndoorRouteStep step : allStep) {
+                            List<LatLng> wayPoints = step.getWayPoints();
+                            pointList.addAll(wayPoints);
+                        }
+                        PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
+                        baiduMap.addOverlay(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onGetBikingRouteResult(BikingRouteResult result) {
+                Log.d(TAG, "onGetBikingRouteResult: ");
+                if(null != result && result.error == SearchResult.ERRORNO.NO_ERROR){
+                    // 有结果
+                    List<BikingRouteLine> routeLines = result.getRouteLines();
+                    if (routeLines != null && routeLines.size() > 0) {
+                        List<LatLng> pointList = new ArrayList<>();
+                        List<BikingRouteLine.BikingStep> allStep = routeLines.get(0).getAllStep();
+                        for (BikingRouteLine.BikingStep step : allStep) {
+                            List<LatLng> wayPoints = step.getWayPoints();
+                            pointList.addAll(wayPoints);
+                        }
+                        PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
+                        baiduMap.addOverlay(options);
+                    }
+                }
+            }
+        });
         ivLocal.setOnClickListener(this);
         btnSearch.setOnClickListener(this);
         geocoder.setOnGetGeoCodeResultListener(this);
         baiduMap.setOnMapClickListener(onMapClickListener); // 地图单击事件
         baiduMap.setOnMapLongClickListener(onMapLongClickListener); // 地图长按事件
         baiduMap.setOnMarkerClickListener(onMarkerClickListener); //
-        poiSearch.setOnGetPoiSearchResultListener(poiListener);
         myOrientationListener.setmOnOrientationListener(new MyOrientationListener.OnOrientationListener() {
             @Override
             public void onOrientationChanged(float x) {
@@ -161,7 +293,6 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 Log.d(TAG, "onTextChanged: " + s.toString());
                 if(s.length() > 0){
-                    searchInCity(s.toString(),100);
                 }
             }
 
@@ -175,19 +306,33 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
             public void onCheckedChanged(RadioGroup group, @IdRes int checkedId) {
                 RadioButton rb = (RadioButton) group.findViewById(checkedId);
                 String string = rb.getText().toString();
-                Log.d(TAG, "onCheckedChanged: " + string);
+                PlanNode startPlanNode = PlanNode.withLocation(startLatLng);
+                PlanNode endPlanNode = PlanNode.withLocation(endLatLng);
                 switch (string) {
-                    case "周边":
+                    case "驾车":
                         searchType = 0;
-                        etKeyword.setHint("输入关键字检索周边");
+                        if(startLatLng != null && endLatLng != null){
+                            routePlanSearch.drivingSearch(new DrivingRoutePlanOption().from(startPlanNode).to(endPlanNode));
+                        }
                         break;
-                    case "城市":
+                    case "步行":
                         searchType = 1;
-                        etKeyword.setHint("输入关键字检索当前城市");
+                        if(startLatLng != null && endLatLng != null){
+                            routePlanSearch.walkingSearch(new WalkingRoutePlanOption().from(startPlanNode).to(endPlanNode));
+                        }
                         break;
                     case "公交":
                         searchType = 2;
-                        etKeyword.setHint("输入关键字检索公交");
+                        if(startLatLng != null && endLatLng != null){
+                            //routePlanSearch.masstransitSearch(new MassTransitRoutePlanOption().from(startPlanNode).to(endPlanNode));
+                            routePlanSearch.transitSearch(new TransitRoutePlanOption().city(city).from(startPlanNode).to(endPlanNode));
+                        }
+                      break;
+                    case "骑行":
+                        searchType = 3;
+                        if(startLatLng != null && endLatLng != null){
+                            routePlanSearch.bikingSearch(new BikingRoutePlanOption().from(startPlanNode).to(endPlanNode));
+                        }
                         break;
                 }
             }
@@ -203,22 +348,24 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
             case R.id.btnSearch: // 搜索按钮
                 String keyword = etKeyword.getText().toString();
                 if (!TextUtils.isEmpty(keyword)) {
-                    switch (searchType) {
-                        case 0: // 周边
-                            searchNearby(searchPoint, keyword, 10, 1000);
-                            break;
-                        case 1: // 需要获取搜索范围的城市
-                            searchInCity(keyword, 10);
-                            break;
-                        case 2: // 公交
-                            searchInCity(keyword, 100);
-                            break;
-                    }
+                    searchNearby(point, keyword, 10, 1000);
                 } else {
                     showToast("请输入关键字");
                 }
                 break;
         }
+    }
+
+    /**
+     * 发起检索请求
+     *
+     * @param latLng
+     * @param keyword
+     * @param pageNum
+     * @param radius
+     */
+    private void searchNearby(LatLng latLng, String keyword, int pageNum, int radius) {
+        poiSearch.searchNearby(new PoiNearbySearchOption().keyword(keyword).location(latLng).pageNum(pageNum).radius(radius));
     }
 
     /**
@@ -323,23 +470,6 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
                 //获取POI检索结果
                 List<PoiInfo> allPoi = result.getAllPoi();
                 if (allPoi != null) {
-                    if(searchType == 2) {
-                        for(PoiInfo poiInfo : allPoi){
-                            if (poiInfo.type == PoiInfo.POITYPE.BUS_LINE || poiInfo.type == PoiInfo.POITYPE.SUBWAY_LINE) {
-                                //说明该条POI为公交信息，获取该条POI的UID
-                                String uid = poiInfo.uid;
-                                busLineSearch.searchBusLine(new BusLineSearchOption().city(city).uid(uid));
-                                busLineSearch.setOnGetBusLineSearchResultListener(new OnGetBusLineSearchResultListener() {
-                                    @Override
-                                    public void onGetBusLineResult(BusLineResult busLineResult) {
-
-                                    }
-                                });
-                            } else {
-                                showToast("没有找到公交信息");
-                            }
-                        }
-                    }
                     tvSearchResult.setText("本次共搜索到" + allPoi.size() + "条记录");
                     Message msg = handler.obtainMessage();
                     msg.obj = allPoi;
@@ -394,7 +524,6 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
                 baiduMap.setMyLocationConfigeration(configuration);
                 if (isFirstLocation || isRequest) {
                     point = new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude()); // 获取定位经纬度
-                    searchPoint = point;
                     city = bdLocation.getCity();
                     button.setText(city);
                     baiduMap.clear();
@@ -413,18 +542,39 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
      */
     private BaiduMap.OnMarkerClickListener onMarkerClickListener = new BaiduMap.OnMarkerClickListener() {
         @Override
-        public boolean onMarkerClick(Marker marker) {
+        public boolean onMarkerClick(final Marker marker) {
             LatLng latLng = marker.getPosition();
             Bundle bundle = marker.getExtraInfo();
+            View popView = LayoutInflater.from(RoutePlanActivity.this).inflate(R.layout.layout_pop_window_route_plan, null);
+            TextView tvName = (TextView) popView.findViewById(R.id.tvName);
+            TextView tvGotoHere = (TextView) popView.findViewById(R.id.tvGotoHere);
+            TextView tvAddress = (TextView) popView.findViewById(R.id.tvAddress);
+            TextView tvFromHere = (TextView) popView.findViewById(R.id.tvFromHere);
+            TextView tvPhone = (TextView) popView.findViewById(R.id.tvPhone);
+                tvGotoHere.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showToast("去这里"); // 终点
+                        endLatLng = marker.getPosition();
+                        Marker endMarker = createMarker(endLatLng, R.mipmap.ic_end_marker, false);
+                        endMarker.setTitle("终点");
+                    }
+                });
+            tvFromHere.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showToast("从这出发"); // 起点
+                    startLatLng = marker.getPosition();
+                    Marker startMarker = createMarker(startLatLng, R.mipmap.ic_end_marker, false);
+                    startMarker.setTitle("起点");
+                }
+            });
             if (bundle != null) {
-                PoiInfo poiInfo = bundle.getParcelable("poiInfo");
+                final PoiInfo poiInfo = bundle.getParcelable("poiInfo");
                 if (poiInfo != null) {
-                    View popView = LayoutInflater.from(POIMapActivity.this).inflate(R.layout.layout_pop_window_poi, null);
-                    TextView tvName = (TextView) popView.findViewById(R.id.tvName);
-                    TextView tvAddress = (TextView) popView.findViewById(R.id.tvAddress);
-                    TextView tvPhone = (TextView) popView.findViewById(R.id.tvPhone);
                     tvName.setText(poiInfo.name);
                     tvAddress.setText(poiInfo.address);
+
                     tvPhone.setText(poiInfo.phoneNum);
                     popView.setBackgroundResource(R.mipmap.ic_pop_info_window);
                     createInfoWindow(popView, latLng, -64); // 创建InfoWindow
@@ -455,7 +605,6 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
         @Override
         public void onMapLongClick(LatLng latLng) {
             Log.d(TAG, "onMapLongClick: 被长按了一下");
-            searchPoint = latLng;
             baiduMap.clear();
             Marker marker = createMarker(latLng, R.mipmap.ic_localtion, false);
             marker.setTitle("点击搜索按钮，搜索周边");
@@ -481,31 +630,6 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
             return false;
         }
     };
-
-    /**
-     * 发起检索请求
-     *
-     * @param keyword
-     * @param pageNum
-     */
-    private void searchInCity(String keyword, int pageNum) {
-        if (city == null) {
-            city = "深圳市";
-        }
-        poiSearch.searchInCity(new PoiCitySearchOption().city(city).keyword(keyword).pageNum(pageNum));
-    }
-
-    /**
-     * 发起检索请求
-     *
-     * @param latLng
-     * @param keyword
-     * @param pageNum
-     * @param radius
-     */
-    private void searchNearby(LatLng latLng, String keyword, int pageNum, int radius) {
-        poiSearch.searchNearby(new PoiNearbySearchOption().keyword(keyword).location(latLng).pageNum(pageNum).radius(radius));
-    }
 
     /**
      * 请求定位
@@ -558,7 +682,7 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
                         updateMap(allPoi.get(0).location);
                         names.clear();
                         names.addAll(list);
-                        adapter = new ArrayAdapter<>(POIMapActivity.this, android.R.layout.simple_dropdown_item_1line, names);
+                        adapter = new ArrayAdapter<>(RoutePlanActivity.this, android.R.layout.simple_dropdown_item_1line, names);
                         etKeyword.setAdapter(adapter);
                     }
                     break;
@@ -577,7 +701,6 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
             address = "未知地址";
         }
         Log.d(TAG, "onGetReverseGeoCodeResult: 当前地址：" + address);
-        searchPoint = reverseGeoCodeResult.getLocation();
     }
 
     @Override
@@ -615,13 +738,14 @@ public class POIMapActivity extends BaseActivity implements OnGetGeoCoderResultL
         super.onDestroy();
         mapView.onDestroy();
         geocoder.destroy();
-        poiSearch.destroy();
         //关闭定位
         baiduMap.setMyLocationEnabled(false);
         locationClient.stop();
         //停止方向传感器
         myOrientationListener.stop();
         locationClient.unRegisterLocationListener(myLocationListener);
+        routePlanSearch.destroy();
+        poiSearch.destroy();
     }
 
 }

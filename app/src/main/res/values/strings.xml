@@ -1,6 +1,13 @@
 <resources>
     <string name="app_name">BaiduMapDemo</string>
     <string name="common_search">搜索</string>
+    <string name="common_bus">公交</string>
+    <string name="common_search_result">本次共搜索到0条记录</string>
+    <string name="common_name">蝴蝶梦音乐美食</string>
+    <string name="common_address">深圳市罗湖区东门步行街18号</string>
+    <string name="common_phone">0755-88010000</string>
+    <string name="common_goto_here">到这去</string>
+    <string name="common_from_here">从这出发</string>
     <string name="common_input_key_word_to_search">长按选址，输入关键字搜索</string>
     <string name="common_long_click_upload_user_info_and_search_nearby">长按选址，上传位置并查询周边</string>
     <string name="common_map">地图</string>
@@ -15,4 +22,5 @@
     <string name="common_indoor_map_long_click_set_end_node">长按设置终点</string>
     <string name="common_indoor_map_route">导航</string>
     <string name="common_radar_nearby_map">我的周边雷达</string>
+    <string name="common_route_plan">线路规划</string>
 </resources>
