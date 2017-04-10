@@ -29,8 +29,8 @@ import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.map.OverlayOptions;
-import com.baidu.mapapi.map.PolylineOptions;
 import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.overlayutil.IndoorRouteOverlay;
 import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.geocode.GeoCodeResult;
 import com.baidu.mapapi.search.geocode.GeoCoder;
@@ -59,7 +59,6 @@ import com.forms.wjl.map.demo.R;
 import com.forms.wjl.map.demo.base.BaseActivity;
 import com.forms.wjl.map.demo.view.MyOrientationListener;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -250,6 +249,8 @@ public class IndoorMapActivity extends BaseActivity implements OnGetGeoCoderResu
         }
     };
 
+    private IndoorRouteOverlay indoorRouteOverlay;
+
     private OnGetRoutePlanResultListener routeListener = new OnGetRoutePlanResultListener() {
         @Override
         public void onGetWalkingRouteResult(WalkingRouteResult walkingRouteResult) {
@@ -284,17 +285,11 @@ public class IndoorMapActivity extends BaseActivity implements OnGetGeoCoderResu
                     Log.d(TAG, "onGetIndoorRouteResult: getDuration" + rl.getDuration());
                 }
                 if (routeLines.size() > 0) {
-                    List<LatLng> pointList = new ArrayList<>();
-                    List<IndoorRouteLine.IndoorRouteStep> allStep = routeLines.get(0).getAllStep();
-                    for (IndoorRouteLine.IndoorRouteStep step : allStep) {
-                        List<LatLng> wayPoints = step.getWayPoints();
-                        pointList.addAll(wayPoints);
-                        String instructions = step.getInstructions();
-                        Log.d(TAG, "onGetIndoorRouteResult: instructions" + instructions);
-                        showToast("线路已规划好，" + instructions);
-                    }
-                    PolylineOptions options = new PolylineOptions().color(R.color.colorAccent).width(10).points(pointList);
-                    baiduMap.addOverlay(options);
+                    indoorRouteOverlay = new IndoorRouteOverlay(baiduMap);
+                    baiduMap.setOnMarkerClickListener(indoorRouteOverlay);
+                    indoorRouteOverlay.setData(result.getRouteLines().get(0));
+                    indoorRouteOverlay.addToMap();
+                    indoorRouteOverlay.zoomToSpan();
                 }
             } else {
                 showToast("没有找到相关路线");
@@ -427,6 +422,9 @@ public class IndoorMapActivity extends BaseActivity implements OnGetGeoCoderResu
                     lltInput.setVisibility(View.VISIBLE);
                 } else {
                     // 开始导航
+                    if (indoorRouteOverlay != null) {
+                        indoorRouteOverlay.removeFromMap();
+                    }
                     mRoutePlanSearch.setOnGetRoutePlanResultListener(routeListener);
                     IndoorPlanNode startNode = new IndoorPlanNode(startNodeLatLng, "F1");
                     IndoorPlanNode endNode = new IndoorPlanNode(endNodeLatLng, "F1");

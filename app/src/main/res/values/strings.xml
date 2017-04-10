@@ -23,4 +23,5 @@
     <string name="common_indoor_map_route">导航</string>
     <string name="common_radar_nearby_map">我的周边雷达</string>
     <string name="common_route_plan">线路规划</string>
+    <string name="common_navi">导航</string>
 </resources>
